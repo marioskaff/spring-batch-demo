@@ -3,7 +3,7 @@ package com.dev.community.springbatchdemo.dal.jpa.entities;
 
 import lombok.Data;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name="users")

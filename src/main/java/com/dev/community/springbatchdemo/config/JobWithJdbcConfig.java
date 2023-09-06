@@ -6,9 +6,9 @@ import com.dev.community.springbatchdemo.dal.jdbc.mappers.UserRowMapper;
 import com.dev.community.springbatchdemo.dal.jpa.entities.User;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
-import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
-import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
-import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.job.builder.JobBuilder;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourceProvider;
@@ -16,36 +16,33 @@ import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.transaction.PlatformTransactionManager;
 
 import javax.sql.DataSource;
 
 @Configuration
-@EnableBatchProcessing
+/**
+ * Configuration for job that uses JDBC for database communication
+ */
 public class JobWithJdbcConfig {
+    private final DataSource dataSource;
 
-    private final JobBuilderFactory jobBuilderFactory;
-    private final StepBuilderFactory stepBuilderFactory;
-    private DataSource dataSource;
-
-    public JobWithJdbcConfig(JobBuilderFactory jobBuilderFactory, StepBuilderFactory stepBuilderFactory,
-                             DataSource dataSource) {
-        this.jobBuilderFactory = jobBuilderFactory;
-        this.stepBuilderFactory = stepBuilderFactory;
+    public JobWithJdbcConfig(DataSource dataSource) {
         this.dataSource = dataSource;
     }
 
     @Bean
-    public Job job1() {
-        return jobBuilderFactory.get("job1")
-                .start(step1Job1())
+    public Job job1(JobRepository jobRepository, Step step1Job1) {
+        return new JobBuilder("job1", jobRepository)
+                .start(step1Job1)
                 .listener(new Job1ExecutionListener())
                 .build();
     }
 
     @Bean
-    public Step step1Job1() {
-        return stepBuilderFactory.get("step1")
-                .<User, User>chunk(10)
+    public Step step1Job1(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+        return new StepBuilder("step1", jobRepository)
+                .<User, User>chunk(10, transactionManager)
                 .reader(readerJob1())
                 .processor(processorJob1())
                 .writer(writerJob1())
